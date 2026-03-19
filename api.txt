@@ -1,0 +1,75 @@
+products all
+GET /api/products
+
+filter 
+GET /api/products?category=electronics&brand=sony&minPrice=100&maxPrice=1000
+
+Search products:
+GET /api/products?search=wireless
+
+Get single product:
+GET /api/products/123
+
+http://13.234.59.130:3000/api/auth/verify-otp
+
+Host: mat-database.cdms0o6kyl46.ap-south-1.rds.amazonaws.com
+User: matadmin
+DB: mat-database
+Password: Xu?UrU0j4}mUD7ofV
+
+Host: matdatabase.cdms0o6kyl46.ap-south-1.rds.amazonaws.com
+User: matadmin
+DB: mat-database
+Password: Xu?UrU0j4}mUD7ofV
+
+aws login
+article24x7itsolution@gmail.com
+9425957275@Rohit
+
+pm2 list              # list all processes
+pm2 status            # same as list
+pm2 show <id|name>    # show app details
+pm2 restart app.js
+pm2 stop <id|name> 
+pm2 start app.js --name my-app
+pm2 restart src/server.js
+pm2 restart <id|name>
+
+pm2 reload <id|name>   # zero-downtime reload
+pm2 stop <id|name>
+pm2 delete <id|name>
+
+
+
+
+host: 16.112.90.244
+username:master_nufpvymwsr
+57c4rQddXw8m
+
+Mangal Kumar
+20:56
+nvm install <version_number> 
+# Example: nvm install 22.2.0
+21:05
+57c4rQddXw8m
+Hover over a message to pin it
+keep
+
+vinay
+21:07
+https://phpstack-1575920-6144105.cloudwaysapps.com/
+
+vinay
+21:14
+16.112.90.244
+
+DB name: wtcgkydqqh
+username: wtcgkydqqh
+Password: PV8kfhB7Q4
+21:20
+1.23.192.135
+21:30
+
+
+
+

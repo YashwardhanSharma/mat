@@ -1,0 +1,133 @@
+CREATE TABLE addresses (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    address_type ENUM('shipping', 'billing', 'both') DEFAULT NULL,
+    first_name VARCHAR(100) DEFAULT NULL,
+    last_name VARCHAR(100) DEFAULT NULL,
+    phone VARCHAR(20) NOT NULL,
+    address_line1 VARCHAR(255) NOT NULL,
+    address_line2 VARCHAR(255) NULL,
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(100) NOT NULL,
+    postal_code VARCHAR(20) NOT NULL,
+    country VARCHAR(100) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    CONSTRAINT fk_addresses_customer FOREIGN KEY (user_id) REFERENCES customers(customer_id)
+);
+
+CREATE TABLE orders (
+    order_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    customer_id BIGINT NOT NULL,
+    order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('pending', 'confirmed', 'shipped', 'delivered', 'cancelled') NOT NULL DEFAULT 'pending',
+    total_amount DECIMAL(10,2) NOT NULL,
+    payment_status ENUM('pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'pending',
+    payment_method ENUM('cod', 'credit_card', 'debit_card', 'upi', 'wallet') NOT NULL,
+    shipping_address_id BIGINT NOT NULL,
+    billing_address_id BIGINT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    -- Example foreign keys (you can link them to your own customer/address tables)
+    CONSTRAINT fk_orders_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id),
+    CONSTRAINT fk_orders_shipping_address FOREIGN KEY (shipping_address_id) REFERENCES addresses(address_id),
+    CONSTRAINT fk_orders_billing_address FOREIGN KEY (billing_address_id) REFERENCES addresses(address_id)
+);
+
+
+CREATE TABLE order_items (
+    order_item_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT NOT NULL,
+    product_id BIGINT NOT NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    price DECIMAL(10,2) NOT NULL,        -- Price per unit
+    total_price DECIMAL(10,2) NOT NULL,  -- quantity * price
+    
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+
+05-10-2025
+ALTER TABLE `users` ADD `userType` ENUM('customer','vendor') NOT NULL DEFAULT 'customer' AFTER `id`, ADD `firstName` VARCHAR(100) NULL DEFAULT NULL AFTER `userType`, ADD `lastName` VARCHAR(100) NULL DEFAULT NULL AFTER `firstName`, ADD `email` VARCHAR(50) NULL DEFAULT NULL AFTER `lastName`, ADD `photo` VARCHAR(250) NULL DEFAULT NULL AFTER `email`, ADD `notificationSetting` TINYINT(1) NOT NULL DEFAULT '1' COMMENT '1=ON, 0=OFF' AFTER `photo`;
+ALTER TABLE `products` DROP INDEX `products_userId`;
+ALTER TABLE `products` DROP INDEX `products_status`;
+ALTER TABLE `products` DROP INDEX `products_brand`;
+ALTER TABLE `products` DROP INDEX `products_product_type`;
+
+ALTER TABLE `orders` CHANGE `status` `status` ENUM('pending','processing','shipped','delivered','cancelled','order confirmed') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pending';
+
+TABLE `orders` DROP `order_number`;"?
+
+create new table for address so all addres fiels here
+type = yourSelf, SomeoneElse
+nickName,
+houseNumber,
+floor,
+towar,
+landmark,
+description,
+recipientName,
+recipientPhoneNumber
+
+upload address table alos on server
+
+
+CREATE TABLE `gstn` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `userId` INT(11) NOT NULL,
+  `gstn` VARCHAR(20) NOT NULL,
+  `firstName` VARCHAR(100) NOT NULL,
+  `lastName` VARCHAR(100) NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (`userId`) REFERENCES `users`(`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+ALTER TABLE `addresses` ADD `houseNumber` VARCHAR(250) NULL AFTER `phone`, ADD `floor` VARCHAR(250) NULL AFTER `houseNumber`, ADD `towar` VARCHAR(250) NULL AFTER `floor`, ADD `landmark` VARCHAR(250) NULL AFTER `towar`, ADD `description` VARCHAR(250) NULL AFTER `landmark`, ADD `recipientName` VARCHAR(250) NULL AFTER `description`, ADD `recipientPhoneNumber` VARCHAR(250) NULL AFTER `recipientName`;
+
+for GSTN table
+GSTN
+firstName,
+lastName
+
+ALTER TABLE `orders` CHANGE `status` `status` ENUM('pending','processing','shipped','delivered','cancelled','order confirmed') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'order confirmed';
+
+if user is provider then create table for Business Details
+userId
+companyName
+panNumber,
+gstNumber,
+companyAddress,
+pinCode, 
+city,
+state,
+cinNumber
+
+add product Details
+
+NOT DONE
+07-10-2025
+ALTER TABLE `order_items` ADD `providerId` INT(11) NULL COMMENT 'user.id' AFTER `price`;
+ALTER TABLE `products` CHANGE `userId` `userId` INT(11) NOT NULL COMMENT 'provider id';
+
+08-102025
+ALTER TABLE `users` CHANGE `userType` `userType` ENUM('customer','vendor','admin','subAdmin') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'customer';
+
+ALTER TABLE `products` ADD `userType` VARCHAR(250) NULL AFTER `id`;
+
+DROP TABLE `mat`.`gstn`"
+
+ALTER TABLE `orders` CHANGE `status` `status` ENUM('pending','processing','shipped','delivered','cancelled','orderConfirmed') CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pending';
+
+24-11-2025
+ALTER TABLE `products` ADD `delivery_charges` VARCHAR(250) NULL DEFAULT NULL AFTER `gst`, ADD `coupon_code_apply` VARCHAR(250) NULL DEFAULT NULL AFTER `delivery_charges`;
+
+
+ALTER TABLE `cancel_orders` CHANGE `status` `status` ENUM('pending','approved','rejected','canceled') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'canceled';
