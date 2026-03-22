@@ -35,7 +35,7 @@ exports.getAllProducts = async (req, res) => {
         const cleanItem = item.trim().replace(/^['"]+|['"]+$/g, '').trim(); // remove quotes
       
         whereClause += ` AND LOWER(TRIM(p.item)) LIKE :item`;
-        replacements.item = `${cleanItem.toLowerCase()}%`; // starts with given text
+        replacements.item = `%${cleanItem.toLowerCase()}%`;
       }      
       
       // sanitize brand from query
@@ -58,14 +58,14 @@ exports.getAllProducts = async (req, res) => {
 
       // Only add the brand WHERE clause when cleaned value is non-empty
       if (brandClean.length > 0) {
-        whereClause += ` AND LOWER(TRIM(p.brand)) = :brand`;
-        replacements.brand = brandClean.toLowerCase();
+        whereClause += ` AND LOWER(TRIM(p.brand)) LIKE :brand`;
+        replacements.brand = `%${brandClean.toLowerCase()}%`;
       }
       // Price filters
       // Always filter price > 0
       whereClause += ` AND p.price >= 0`;
 
-      if (price) {
+      if (price !== undefined && price !== null && price !== '') {
         whereClause += ` AND p.price <= :price`;
         replacements.price = parseFloat(price);
       }
@@ -88,7 +88,7 @@ exports.getAllProducts = async (req, res) => {
         )
         `);
 
-        whereClause += ` AND (${conditions.join(" AND ")})`;
+        whereClause += ` AND (${conditions.join(" OR ")})`;
 
         words.forEach((word, index) => {
           replacements[`search${index}`] = `%${word}%`;
