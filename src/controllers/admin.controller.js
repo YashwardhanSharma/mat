@@ -67,145 +67,174 @@ exports.uploadProductImages = async (req, res) => {
 
 //Add Bulke Product
 exports.addBulkeProduct = async (req, res) => {
-    try {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Excel file is required' });
+    }
 
-      if (!req.file) {
-        return res.status(400).json({ message: 'Excel file is required' });
-      }
-      const userId = req.body.userId || 'default';
-      const filePath = req.file.path; // full path of uploaded file
-      const workbook = XLSX.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(sheet);
+    const userId = req.body.userId || 'default';
+    const filePath = req.file.path;
 
-      if (rows.length === 0) {
-        return res.status(400).json({ message: 'No data found in the Excel file' });
-      }
+    const workbook = XLSX.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet);
 
-      for (const row of rows) {
-        const product_type = row["Category"] || "N/A";
-        const subcategory_name = row["Sub Category"] || "N/A";
-        const specification = { 
-          "Sub Variant Title": row["Sub Variant Title"],
-          "Sub Variant Value": row["Sub Variant Value"],
-          "Sub Variant Title_1": row["Sub Variant Title_1"],
-          "Sub Variant Value_1": row["Sub Variant Value_1"],
-          "Sub Variant Title_2": row["Sub Variant Title_2"],
-          };
-        //check if category already exists
-        if(product_type != "N/A" && product_type != ""){
+    if (rows.length === 0) {
+      return res.status(400).json({ message: 'No data found in the Excel file' });
+    }
+
+    for (const row of rows) {
+
+      const product_type = row["Category"] || "N/A";
+      const subcategory_name = row["Sub Category"] || "N/A";
+
+      // ✅ FULL SPECIFICATION FIX
+      const specification = {
+        title: row["Sub Variant Title"] || "",
+        value: row["Sub Variant Value"] || "",
+        title1: row["Sub Variant Title.1"] || "",
+        value1: row["Sub Variant Value.1"] || "",
+        title2: row["Sub Variant Title.2"] || "",
+        value2: row["Sub Variant Value.2"] || "",
+        value3: row["Sub Variant Value.3"] || ""
+      };
+
+      // ✅ CATEGORY
+      if (product_type && product_type !== "N/A") {
         const existing = await Category.findOne({ where: { name: product_type } });
-        //if category does not exist, create it
-        if (!existing) await Category.create({ name: product_type, description: "", status: "ACTIVE" });
+        if (!existing) {
+          await Category.create({
+            name: product_type,
+            description: "",
+            status: "ACTIVE"
+          });
         }
+      }
 
-        //check if subcategory already exists
-        if(subcategory_name != "N/A" && subcategory_name != "" && product_type != "N/A" && product_type != ""){
-          const subcategory = await Subcategory.findOne({
-              where: {
-                category_name: product_type,
-                name: subcategory_name
-              }
-            });
-          //if subcategory does not exist, create it
-          if (!subcategory) await Subcategory.create({
+      // ✅ SUBCATEGORY
+      if (subcategory_name && product_type) {
+        const subcategory = await Subcategory.findOne({
+          where: { category_name: product_type, name: subcategory_name }
+        });
+
+        if (!subcategory) {
+          await Subcategory.create({
             category_name: product_type,
             name: subcategory_name,
             description: "",
             status: "ACTIVE"
           });
         }
-
-        const user = await User.findByPk(userId);
-
-      //   return res.status(200).json({
-      //   status: 'success',
-      //   message: 'Bulke Product added successfully',
-      //   rows: rows.length,
-      //   data: rows
-      // });
-        // Create the product
-      const product = await Product.create({
-        userId,
-        productImageUrl: "",
-        userType:user?.userType || 'admin',
-        heading:row["Product Name"] || "N/A",
-        sub_heading: row["Sub Product Name"] || "N/A",
-        details: row["Product Description"] || "N/A",
-        price:row["Price after discount"] || 0.0,
-        mrp :row["Buying Price"] || 0.0,
-        specification: specification ? JSON.stringify(specification) : null,
-        product_type,
-        brand:row["Brand"] || "N/A",
-        item:row["Variant Value"] || "N/A",
-        status: row["Status"]?.toLowerCase() === "active" ? "active" : "active",
-        stock_quantity:row["Pack of"] || 0,
-        measure:row["Measure"] || "N/A",
-        selling_measure:row["Selling Measure"] || "N/A",
-        measure_term:row["Measure Term"] || "N/A",
-        measure_value:row["Measure Value"] || "N/A",
-        selling_measure_rate:row["Selling Measure Rate"] || "N/A",
-        unit_mrp_incl_gst:row["MRP (Incl GST)            125 MRP Entries left"] || "N/A",
-        discount_rule: row["Discount Rule"] || 'percentage',
-        discount_value:row["Dealer Discount"] || "N/A",
-        delivery_time:row["Delivery Time"] || "N/A",
-        logistics_rule:row["Logistics Rule"] || "N/A",
-        gst:row["GST"] || "N/A",
-        delivery_charges:row["Delivery Charges"] || "N/A",
-        coupon_code_apply:row["Coupon Code Apply"] || "No",
-      });
-
-// http://35.154.175.155:3000/uploads/products/default/1765110041551-320321217.png
-        const imageField = row["IMAGES  31 Images left"];
-        if (imageField && typeof imageField === "string" && imageField.trim() !== "") {
-
-          console.log("images", row["IMAGES  31 Images left"])
-          const str = row["IMAGES  31 Images left"];
-          const images = str.split(",").map(s => s.trim());
-          console.log("parsed images:", images);
-          const hostName = constant.HOST
-          // const hostName = 'http://localhost:3000'
-          if (images.length > 0) {
-            const imageData = images.map((url, index) => ({
-              productId: product.id,
-              image_url: `${hostName}/uploads/products/default/images/${url}.png`,
-              is_primary: index === 0 ? true : false, // first image primary
-              display_order: index,
-              status: 'active'
-            }));
-            console.log("image data:", imageData);
-            await ProductImage.bulkCreate(imageData);
-          }
-
-
-
-          // const imageData = {
-          //   productId: product.id,
-          //   image_url: row["IMAGES  31 Images left"],
-          //   is_primary: false, // first image primary
-          //   display_order: 1,
-          //   status: 'active'
-          // };
-          // await ProductImage.bulkCreate(imageData);
-        }
       }
 
-      return res.status(200).json({
-        status: 'success',
-        message: 'Bulke Product added successfully',
-        rows: rows.length,
-        data: rows
+      const user = await User.findByPk(userId);
+
+      // ✅ PRODUCT CREATE (ALL FIELDS COVERED)
+      const product = await Product.create({
+        userId,
+        userType: user?.userType || 'admin',
+        productImageUrl: "",
+
+        // BASIC
+        heading: row["Product Name"] || "",
+        sub_heading: row["Sub Product Name"] || "",
+        details: row["Product Description"] || "",
+
+        // 🔥 NEW FIELDS
+        alternate_names: row["Alternate Names (for search)"] || "",
+        variant_title: row["Variant Title"] || "",
+        size: row["Size"] || "",
+        product_code: row["Product Code"] || "",
+        bulk_application: row["Bulk application"] || "",
+        unit_weight: row["Unit Weight (in gm)"] || "",
+        supplied_with: row["Supplied With"] || "",
+        suitable_for: row["Suitable For"] || "",
+        hsn_code: row["HSN Code"] || "",
+
+        // PRODUCT
+        product_type,
+        brand: row["Brand"] || "",
+        item: row["Variant Value"] || "",
+
+        // STOCK
+        stock_quantity: row["Pack of"] || 0,
+
+        // PRICE
+        price: row["Price after discount"] || 0,
+        mrp: row["Buying Price"] || 0,
+        sale_price: row["Sale Price"] || 0,
+        rev_margin: row["Rev Margin"] || "",
+        margin_value: row["Margin Value"] || "",
+
+        // DISCOUNT
+        discount_rule: row["Discount Rule"] || "percentage",
+        discount_value: row["Discount Value"] || "",
+        discount_rate: row["Discount Rate"] || "",
+
+        // TAX
+        gst: row["GST"] || "",
+
+        // MEASURE
+        measure: row["Measure"] || "",
+        selling_measure: row["Selling Measure"] || "",
+        measure_term: row["Measure Term"] || "",
+        measure_value: row["Measure Value"] || "",
+        selling_measure_rate: row["Selling Measure Rate"] || "",
+
+        // ✅ FIXED COLUMN NAME
+        unit_mrp_incl_gst: row["MRP (Incl GST)"] || "",
+
+        // LOGISTICS
+        delivery_time: row["Delivery Time"] || "",
+        logistics_rule: row["Logistics Rule"] || "",
+        returns: row["Returns"] || "",
+
+        // STATUS
+        status: row["Status"]?.toLowerCase() === "active" ? "active" : "inactive",
+
+        coupon_code_apply: row["Coupon Code Apply"] || "No",
+
+        // SPEC
+        specification: JSON.stringify(specification)
       });
 
-    } catch (error) {
-      console.error('Add product error:', error);
-      res.status(500).json({
-        status: 'error',
-        message: 'Failed to add product',
-        ...(process.env.NODE_ENV === 'development' && { error: error.message })
-      });
+      // ✅ IMAGE FIX
+      const imageField = row["IMAGES  35 Images left"];
+
+      if (imageField && typeof imageField === "string") {
+        const images = imageField.split(",").map(s => s.trim());
+
+        if (images.length > 0) {
+          const hostName = constant.HOST;
+
+          const imageData = images.map((url, index) => ({
+            productId: product.id,
+            image_url: `${hostName}/uploads/products/default/images/${url}.png`,
+            is_primary: index === 0,
+            display_order: index,
+            status: 'active'
+          }));
+
+          await ProductImage.bulkCreate(imageData);
+        }
+      }
     }
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Bulk Product added successfully',
+      rows: rows.length
+    });
+
+  } catch (error) {
+    console.error('Add product error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to add product',
+      error: error.message
+    });
+  }
 };
 
   // Add a new product

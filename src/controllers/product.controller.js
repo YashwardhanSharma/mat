@@ -235,42 +235,84 @@ exports.getProductById = async (req, res) => {
         return res.status(400).json({ status: 'error', message: 'Product ID is required' });
       }
   
-      const query = `
-        SELECT 
-          p.id,
-          p.userId,
-          p.heading AS name,
-          p.sub_heading,
-          p.details AS description,
-          p.price,
-          p.mrp,
-          p.product_type,
-          p.productImageUrl,
-          p.brand,
-          p.item,
-          p.status,
-          p.specification,
-          p.measure,
-          p.selling_measure,
-          p.measure_term,
-          p.measure_value,
-          p.selling_measure_rate,
-          p.unit_mrp_incl_gst,
-          p.discount_rule,
-          p.discount_value,
-          p.delivery_time,
-          p.logistics_rule,
-          p.gst,
-          p.delivery_charges,
-          p.coupon_code_apply,
-          GROUP_CONCAT(pi.image_url ORDER BY pi.is_primary DESC, pi.display_order ASC, pi.id ASC) AS images
-        FROM products p
-        LEFT JOIN product_images pi
-          ON pi.productId = p.id AND pi.status = 'active'
-        WHERE p.id = :id AND p.status = 'active'
-        GROUP BY p.id
-        LIMIT 1
-      `;
+  const query = `
+  SELECT 
+    p.id,
+    p.userId,
+
+    -- BASIC
+    p.heading AS name,
+    p.sub_heading,
+    p.details AS description,
+
+    -- 🔥 NEW FIELDS (ADDED)
+    p.alternate_names,
+    p.variant_title,
+    p.size,
+    p.product_code,
+    p.bulk_application,
+    p.unit_weight,
+    p.supplied_with,
+    p.suitable_for,
+    p.hsn_code,
+
+    -- PRODUCT
+    p.product_type,
+    p.brand,
+    p.item,
+
+    -- PRICE
+    p.price,
+    p.mrp,
+    p.sale_price,
+    p.rev_margin,
+    p.margin_value,
+
+    -- DISCOUNT
+    p.discount_rule,
+    p.discount_value,
+    p.discount_rate,
+
+    -- TAX
+    p.gst,
+
+    -- STOCK
+    p.stock_quantity,
+
+    -- MEASURE
+    p.measure,
+    p.selling_measure,
+    p.measure_term,
+    p.measure_value,
+    p.selling_measure_rate,
+    p.unit_mrp_incl_gst,
+
+    -- LOGISTICS
+    p.delivery_time,
+    p.logistics_rule,
+    p.returns,
+
+    -- OTHER
+    p.status,
+    p.productImageUrl,
+    p.delivery_charges,
+    p.coupon_code_apply,
+    p.specification,
+
+    -- IMAGES
+    GROUP_CONCAT(
+      pi.image_url 
+      ORDER BY pi.is_primary DESC, pi.display_order ASC, pi.id ASC
+    ) AS images
+
+  FROM products p
+  LEFT JOIN product_images pi
+    ON pi.productId = p.id AND pi.status = 'active'
+  ${whereClause}
+  GROUP BY p.id
+  ${orderBy}
+  LIMIT :limit OFFSET :offset
+`;
   
       const [product] = await sequelize.query(query, {
         replacements: { id },
@@ -282,35 +324,76 @@ exports.getProductById = async (req, res) => {
       }
   
       // Format product
-      const formattedProduct = {
-        id: product.id,
-        name: product.name,
-        sub_heading: product.sub_heading,
-        description: product.description,
-        price: parseFloat(product.price),
-        mrp: parseFloat(product.mrp || product.price),
-        discount: product.mrp > product.price ? Math.round(((product.mrp - product.price) / product.mrp) * 100) : 0,
-        product_type: product.product_type,
-        brand: product.brand,
-        item: product.item,
-        status: product.status,
-        productImageUrl: product.productImageUrl,
-        specification: product.specification,
-        measure: product.measure,
-        selling_measure: product.selling_measure,
-        measure_term: product.measure_term,
-        measure_value: product.measure_value,
-        selling_measure_rate: product.selling_measure_rate,
-        unit_mrp_incl_gst: product.unit_mrp_incl_gst,
-        discount_rule: product.discount_rule,
-        discount_value: product.discount_value,
-        delivery_time: product.delivery_time,
-        logistics_rule: product.logistics_rule,
-        gst: product.gst,
-        delivery_charges: product.delivery_charges,
-        coupon_code_apply: product.coupon_code_apply,
-        images: product.images ? product.images.split(',') : []
-      };
+const formattedProducts = products.map(p => ({
+  id: p.id,
+  name: p.name,
+  sub_heading: p.sub_heading,
+  description: p.description,
+
+  // 🔥 NEW FIELDS
+  alternate_names: p.alternate_names,
+  variant_title: p.variant_title,
+  size: p.size,
+  product_code: p.product_code,
+  bulk_application: p.bulk_application,
+  unit_weight: p.unit_weight,
+  supplied_with: p.supplied_with,
+  suitable_for: p.suitable_for,
+  hsn_code: p.hsn_code,
+
+  // PRODUCT
+  product_type: p.product_type,
+  brand: p.brand,
+  item: p.item,
+
+  // PRICE
+  price: parseFloat(p.price || 0),
+  mrp: parseFloat(p.mrp || p.price || 0),
+  sale_price: parseFloat(p.sale_price || 0),
+  rev_margin: p.rev_margin,
+  margin_value: p.margin_value,
+
+  // DISCOUNT
+  discount_rule: p.discount_rule,
+  discount_value: p.discount_value,
+  discount_rate: p.discount_rate,
+
+  // AUTO DISCOUNT CALC
+  discount: p.mrp > p.price 
+    ? Math.round(((p.mrp - p.price) / p.mrp) * 100) 
+    : 0,
+
+  // TAX
+  gst: p.gst,
+
+  // STOCK
+  stock_quantity: p.stock_quantity,
+
+  // MEASURE
+  measure: p.measure,
+  selling_measure: p.selling_measure,
+  measure_term: p.measure_term,
+  measure_value: p.measure_value,
+  selling_measure_rate: p.selling_measure_rate,
+  unit_mrp_incl_gst: p.unit_mrp_incl_gst,
+
+  // LOGISTICS
+  delivery_time: p.delivery_time,
+  logistics_rule: p.logistics_rule,
+  returns: p.returns,
+
+  // OTHER
+  status: p.status,
+  productImageUrl: p.productImageUrl,
+  delivery_charges: p.delivery_charges,
+  coupon_code_apply: p.coupon_code_apply,
+
+  // SPEC
+  specification: p.specification ? JSON.parse(p.specification) : {},
+
+  // IMAGES
+  images: p.images ? p.images.split(',') : []
+}));
   
       res.status(200).json({
         status: 'success',
