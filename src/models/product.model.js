@@ -23,6 +23,42 @@ const Product = sequelize.define('Product', {
     type: DataTypes.STRING(255),
     allowNull: true,
   },
+  alternate_names: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  variant_title: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  size: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  product_code: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  bulk_application: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  unit_weight: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  supplied_with: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  suitable_for: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  hsn_code: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
   details: {
     type: DataTypes.TEXT,
     allowNull: true,
@@ -36,6 +72,18 @@ const Product = sequelize.define('Product', {
     type: DataTypes.STRING(255),
     allowNull: false,
     validate: { min: 0 }
+  },
+  sale_price: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  rev_margin: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  margin_value: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
   },
   specification: {
     type: DataTypes.JSON,
@@ -109,6 +157,10 @@ const Product = sequelize.define('Product', {
     type: DataTypes.STRING(255),
     allowNull: true,
   },
+  discount_rate: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
   delivery_time: {
     type: DataTypes.STRING(255),
     allowNull: true,
@@ -122,6 +174,10 @@ const Product = sequelize.define('Product', {
     allowNull: true,
   },
   logistics_rule: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  returns: {
     type: DataTypes.STRING(255),
     allowNull: true,
   },

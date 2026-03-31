@@ -245,9 +245,21 @@ exports.addProduct = async (req, res) => {
         heading,
         productImageUrl,
         sub_heading,
+        alternate_names,
+        variant_title,
+        size,
+        product_code,
+        bulk_application,
+        unit_weight,
+        supplied_with,
+        suitable_for,
+        hsn_code,
         details,
         price,
         mrp,
+        sale_price,
+        rev_margin,
+        margin_value,
         specification,
         product_type,
         brand,
@@ -262,8 +274,10 @@ exports.addProduct = async (req, res) => {
         unit_mrp_incl_gst,
         discount_rule,
         discount_value,
+        discount_rate,
         delivery_time,
         logistics_rule,
+        returns,
         gst,
         delivery_charges,
         coupon_code_apply,
@@ -288,9 +302,21 @@ exports.addProduct = async (req, res) => {
         userType:user?.userType || 'admin',
         heading,
         sub_heading: sub_heading || null,
+        alternate_names: alternate_names || null,
+        variant_title: variant_title || null,
+        size: size || null,
+        product_code: product_code || null,
+        bulk_application: bulk_application || null,
+        unit_weight: unit_weight || null,
+        supplied_with: supplied_with || null,
+        suitable_for: suitable_for || null,
+        hsn_code: hsn_code || null,
         details: details || null,
         price,
         mrp,
+        sale_price: sale_price || null,
+        rev_margin: rev_margin || null,
+        margin_value: margin_value || null,
         specification: specification ? JSON.stringify(specification) : null,
         product_type,
         brand,
@@ -305,16 +331,19 @@ exports.addProduct = async (req, res) => {
         unit_mrp_incl_gst,
         discount_rule: discount_rule || 'percentage',
         discount_value,
+        discount_rate,
         delivery_time,
         logistics_rule,
+        returns,
         gst,
         delivery_charges,
         coupon_code_apply,
       });
   
       // If images array is provided, save them in ProductImage table
-      if (images.length > 0) {
-        const imageData = images.map((url, index) => ({
+      const imageList = Array.isArray(images) ? images : [];
+      if (imageList.length > 0) {
+        const imageData = imageList.map((url, index) => ({
           productId: product.id,
           image_url: url,
           is_primary: index === 0 ? true : false, // first image primary
@@ -349,9 +378,21 @@ exports.updateProduct = async (req, res) => {
         heading,
         productImageUrl,
         sub_heading,
+        alternate_names,
+        variant_title,
+        size,
+        product_code,
+        bulk_application,
+        unit_weight,
+        supplied_with,
+        suitable_for,
+        hsn_code,
         details,
         price,
         mrp,
+        sale_price,
+        rev_margin,
+        margin_value,
         specification,
         product_type,
         brand,
@@ -366,8 +407,10 @@ exports.updateProduct = async (req, res) => {
         unit_mrp_incl_gst,
         discount_rule,
         discount_value,
+        discount_rate,
         delivery_time,
         logistics_rule,
+        returns,
         gst,
         delivery_charges,
         coupon_code_apply,
@@ -395,9 +438,21 @@ exports.updateProduct = async (req, res) => {
       product.productImageUrl = productImageUrl || product.productImageUrl;
       product.heading = heading || product.heading;
       product.sub_heading = sub_heading || product.sub_heading;
+      if (typeof alternate_names !== 'undefined') product.alternate_names = alternate_names;
+      if (typeof variant_title !== 'undefined') product.variant_title = variant_title;
+      if (typeof size !== 'undefined') product.size = size;
+      if (typeof product_code !== 'undefined') product.product_code = product_code;
+      if (typeof bulk_application !== 'undefined') product.bulk_application = bulk_application;
+      if (typeof unit_weight !== 'undefined') product.unit_weight = unit_weight;
+      if (typeof supplied_with !== 'undefined') product.supplied_with = supplied_with;
+      if (typeof suitable_for !== 'undefined') product.suitable_for = suitable_for;
+      if (typeof hsn_code !== 'undefined') product.hsn_code = hsn_code;
       product.details = details || product.details;
       product.price = price || product.price;
       product.mrp = mrp || product.mrp;
+      if (typeof sale_price !== 'undefined') product.sale_price = sale_price;
+      if (typeof rev_margin !== 'undefined') product.rev_margin = rev_margin;
+      if (typeof margin_value !== 'undefined') product.margin_value = margin_value;
       product.specification = specification
         ? JSON.stringify(specification)
         : product.specification;
@@ -418,8 +473,10 @@ exports.updateProduct = async (req, res) => {
       if (typeof unit_mrp_incl_gst !== 'undefined') product.unit_mrp_incl_gst = unit_mrp_incl_gst;
       if (typeof discount_rule !== 'undefined') product.discount_rule = discount_rule || 'percentage';
       if (typeof discount_value !== 'undefined') product.discount_value = discount_value;
+      if (typeof discount_rate !== 'undefined') product.discount_rate = discount_rate;
       if (typeof delivery_time !== 'undefined') product.delivery_time = delivery_time;
       if (typeof logistics_rule !== 'undefined') product.logistics_rule = logistics_rule;
+      if (typeof returns !== 'undefined') product.returns = returns;
       if (typeof gst !== 'undefined') product.gst = gst;
       if (typeof delivery_charges !== 'undefined') product.delivery_charges = delivery_charges;
       if (typeof coupon_code_apply !== 'undefined') product.coupon_code_apply = coupon_code_apply;
@@ -427,12 +484,13 @@ exports.updateProduct = async (req, res) => {
       await product.save();
   
       // Update product images if provided
-      if (images.length > 0) {
+      const imageList = Array.isArray(images) ? images : [];
+      if (imageList.length > 0) {
         // Remove old images
         await ProductImage.destroy({ where: { productId: product.id } });
   
         // Add new images
-        const imageData = images.map((url, index) => ({
+        const imageData = imageList.map((url, index) => ({
           productId: product.id,
           image_url: url,
           is_primary: index === 0 ? true : false,
