@@ -10,8 +10,70 @@ const Subcategory = require('../models/subcategory.model');
 const constant = require('../config/constant');
 const XLSX = require('xlsx');
 const fs = require('fs').promises;
+const path = require('path');
 
 require('dotenv').config();
+
+const DEFAULT_PRODUCT_IMAGE_DIR = path.join(__dirname, '..', 'uploads', 'products', 'default', 'images');
+const DEFAULT_PRODUCT_IMAGE_URL_PATH = '/uploads/products/default/images';
+const IMAGE_PLACEHOLDERS = new Set(['', 'na', 'n/a', 'n_a', 'null', 'undefined', 'none', '-']);
+const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp']);
+
+const normalizeImageKey = (value) => String(value || '')
+  .trim()
+  .replace(/\s+/g, ' ')
+  .replace(/[\s_/]+/g, '_')
+  .replace(/\.+$/, '')
+  .toLowerCase();
+
+const stripImageExtension = (value) => {
+  const ext = path.extname(value).toLowerCase();
+  return IMAGE_EXTENSIONS.has(ext) ? value.slice(0, -ext.length) : value;
+};
+
+const stripCopySuffix = (value) => value.replace(/\s*\(\d+\)$/, '');
+
+const buildImageLookup = async () => {
+  const files = await fs.readdir(DEFAULT_PRODUCT_IMAGE_DIR);
+  const lookup = new Map();
+
+  files.forEach((file) => {
+    const parsed = path.parse(file);
+    const cleanName = stripCopySuffix(parsed.name).trim();
+    const keys = [
+      file,
+      parsed.name,
+      `${parsed.name}${parsed.ext}`,
+      parsed.name.trim(),
+      `${parsed.name.trim()}${parsed.ext}`,
+      cleanName,
+      `${cleanName}${parsed.ext}`
+    ];
+
+    keys.forEach((key) => {
+      const normalizedKey = normalizeImageKey(key);
+      if (normalizedKey && !lookup.has(normalizedKey)) {
+        lookup.set(normalizedKey, file);
+      }
+    });
+  });
+
+  return lookup;
+};
+
+const resolveProductImageFile = (imageValue, imageLookup) => {
+  const rawValue = String(imageValue || '').trim();
+  const normalizedValue = normalizeImageKey(rawValue);
+
+  if (IMAGE_PLACEHOLDERS.has(normalizedValue)) {
+    return null;
+  }
+
+  return imageLookup.get(normalizedValue) || imageLookup.get(normalizeImageKey(stripImageExtension(rawValue))) || null;
+};
+
+const toDefaultProductImageUrl = (hostName, filename) =>
+  `${hostName}${DEFAULT_PRODUCT_IMAGE_URL_PATH}/${encodeURIComponent(filename)}`;
 
 // Upload product images
 exports.uploadProductImages = async (req, res) => {
@@ -83,6 +145,9 @@ exports.addBulkeProduct = async (req, res) => {
     if (rows.length === 0) {
       return res.status(400).json({ message: 'No data found in the Excel file' });
     }
+
+    const imageLookup = await buildImageLookup();
+    const missingImages = new Set();
 
     for (const row of rows) {
 
@@ -199,24 +264,41 @@ exports.addBulkeProduct = async (req, res) => {
         specification: JSON.stringify(specification)
       });
 
-      // ✅ IMAGE FIX
       const imageField = row["IMAGES  35 Images left"];
 
-      if (imageField && typeof imageField === "string") {
-        const images = imageField.split(",").map(s => s.trim());
+      if (imageField) {
+        const images = String(imageField)
+          .split(",")
+          .map(s => s.trim())
+          .filter(Boolean);
 
         if (images.length > 0) {
           const hostName = constant.HOST;
+          const resolvedImages = images
+            .map((image) => {
+              const filename = resolveProductImageFile(image, imageLookup);
+              if (!filename) {
+                const normalizedImage = normalizeImageKey(image);
+                if (!IMAGE_PLACEHOLDERS.has(normalizedImage)) {
+                  missingImages.add(image);
+                }
+                return null;
+              }
+              return filename;
+            })
+            .filter(Boolean);
 
-          const imageData = images.map((url, index) => ({
+          const imageData = resolvedImages.map((filename, index) => ({
             productId: product.id,
-            image_url: `${hostName}/uploads/products/default/images/${url}.png`,
+            image_url: toDefaultProductImageUrl(hostName, filename),
             is_primary: index === 0,
             display_order: index,
             status: 'active'
           }));
 
-          await ProductImage.bulkCreate(imageData);
+          if (imageData.length > 0) {
+            await ProductImage.bulkCreate(imageData);
+          }
         }
       }
     }
@@ -224,7 +306,8 @@ exports.addBulkeProduct = async (req, res) => {
     return res.status(200).json({
       status: 'success',
       message: 'Bulk Product added successfully',
-      rows: rows.length
+      rows: rows.length,
+      missingImages: Array.from(missingImages)
     });
 
   } catch (error) {
