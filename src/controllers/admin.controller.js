@@ -1199,3 +1199,84 @@ exports.deleteProductById = async (req, res) => {
     });
   }
 }
+
+exports.deleteAllProducts = async (req, res) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const totalProducts = await Product.count({ transaction });
+
+    if (totalProducts === 0) {
+      await transaction.commit();
+      return res.status(200).json({
+        status: 'success',
+        message: 'No products found to delete',
+        deletedProducts: 0,
+      });
+    }
+
+    const [orderItemRows] = await sequelize.query(
+      `SELECT COUNT(*) AS count
+       FROM order_items oi
+       INNER JOIN products p ON p.id = oi.product_id`,
+      { transaction }
+    );
+    const orderItemCount = Number(orderItemRows?.[0]?.count || 0);
+
+    if (orderItemCount > 0) {
+      await transaction.rollback();
+      return res.status(409).json({
+        status: 'error',
+        message: 'Products cannot be deleted because they are linked with existing orders',
+        linkedOrderItems: orderItemCount,
+      });
+    }
+
+    await sequelize.query(
+      `DELETE pi FROM product_images pi
+       INNER JOIN products p ON p.id = pi.productId`,
+      { transaction }
+    );
+    await sequelize.query(
+      `DELETE api FROM admin_product_images api
+       INNER JOIN products p ON p.id = api.productId`,
+      { transaction }
+    );
+    await sequelize.query(
+      `DELETE ci FROM cart_items ci
+       INNER JOIN products p ON p.id = ci.productId`,
+      { transaction }
+    );
+    await sequelize.query(
+      `DELETE f FROM favorites f
+       INNER JOIN products p ON p.id = f.productId`,
+      { transaction }
+    );
+    await sequelize.query(
+      `DELETE r FROM ratings r
+       INNER JOIN products p ON p.id = r.productId`,
+      { transaction }
+    );
+
+    const deletedProducts = await Product.destroy({
+      where: {},
+      transaction,
+    });
+
+    await transaction.commit();
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'All products deleted successfully',
+      deletedProducts,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('Delete all products error:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to delete all products',
+      ...(process.env.NODE_ENV === 'development' && { error: error.message }),
+    });
+  }
+};

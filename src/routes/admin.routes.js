@@ -24,6 +24,7 @@ router.get('/users/list', adminController.getUsersByType);
 // Update product
 router.put('/products/update', adminController.updateProduct);
 // Delete product
+router.delete('/products/delete-all', adminController.deleteAllProducts);
 router.delete('/products/delete/:id', adminController.deleteProductById);
 
 router.get('/orders', adminController.getAllOrders);
